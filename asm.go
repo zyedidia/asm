@@ -20,9 +20,10 @@ import (
 var Version = "0.0.0-unknown"
 
 var opts struct {
-	Args    []string `short:"a" long:"arg" description:"Additional arguments for the assembler, may be passed multiple times"`
+	AsArgs  []string `long:"aa" description:"Additional arguments for the assembler, may be passed multiple times"`
+	LdArgs  []string `long:"la" description:"Additional arguments for the linker, may be passed multiple times"`
 	Machine string   `short:"m" long:"machine" description:"Set machine type for disassembly"`
-	Disas   bool     `short:"d" long:"disas" description:"Disassemble instead of assembling"`
+	Disas   bool     `short:"d" long:"disas" description:"Disassemble"`
 	Prefix  string   `short:"p" long:"prefix" description:"Set GNU toolchain prefix" default:"arm-none-eabi"`
 	Verbose bool     `short:"V" long:"verbose" description:"Show additional information while running"`
 	Version bool     `short:"v" long:"version" description:"Show version number"`
@@ -96,9 +97,10 @@ func assemble(insts string) []byte {
 	ld := fmt.Sprintf("%s-ld", opts.Prefix)
 	objcopy := fmt.Sprintf("%s-objcopy", opts.Prefix)
 
-	asargs := append([]string{"--no-warn", asm, "-o", obj}, opts.Args...)
+	asargs := append([]string{"--no-warn", asm, "-o", obj}, opts.AsArgs...)
 	docmd(as, asargs...)
-	docmd(ld, obj, "-T", ldscript, "-o", elf)
+	ldargs := append([]string{obj, "-T", ldscript, "-o", elf}, opts.LdArgs...)
+	docmd(ld, ldargs...)
 	docmd(objcopy, elf, "-O", "binary", bin)
 
 	data, err := ioutil.ReadFile(bin)
@@ -142,6 +144,13 @@ func emitMcode(pattern string) {
 	for len(data) >= 4 {
 		fmt.Printf("%x\n", binary.LittleEndian.Uint32(data))
 		data = data[4:]
+	}
+	if len(data) >= 2 {
+		fmt.Printf("%x\n", binary.LittleEndian.Uint16(data))
+		data = data[2:]
+	}
+	if len(data) > 0 {
+		fmt.Printf("%d\n", data)
 	}
 }
 
